@@ -1,9 +1,8 @@
 from srcs.utils.util import is_master
 import torch
 import torch.distributed as dist
-from torchvision.utils import make_grid
 from srcs.trainer.base import BaseTrainer
-from srcs.utils import inf_loop, collect
+from srcs.utils import inf_loop
 from srcs.logger import BatchMetrics
 
 
@@ -57,7 +56,6 @@ class Trainer(BaseTrainer):
                 self.train_metrics.update('loss', loss.detach().cpu().numpy())
 
             if batch_idx % self.log_step == 0:
-                self.writer.add_image('train/input', make_grid(data.cpu(), nrow=8, normalize=True))
                 for met in self.metric_ftns:
                     metric_output = output.argmax(dim=1)
                     metric = met(metric_output.cpu(), target.cpu())  # average metric between processes
@@ -76,11 +74,11 @@ class Trainer(BaseTrainer):
             self.lr_scheduler.step()
 
         # add result metrics on entire epoch to tensorboard
-        # self.writer.set_step(epoch)
-        # if epoch == 1 and is_master():
-        #     self.writer.add_graph(self.model, data)
-        # for k, v in log.items():
-        #     self.writer.add_scalar(k + '/epoch', v)
+        self.writer.set_step(epoch)
+        if epoch == 1 and is_master():
+            self.writer.add_graph(self.model, data)
+        for k, v in log.items():
+            self.writer.add_scalar(k + '/epoch', v)
         return log
 
     def _valid_epoch(self, epoch):
@@ -100,15 +98,11 @@ class Trainer(BaseTrainer):
                 loss = self.criterion(output, target)
 
                 self.writer.set_step((epoch - 1) * len(self.valid_data_loader) + batch_idx)
-                self.writer.add_image('valid/input', make_grid(data.cpu(), nrow=8, normalize=True))
                 self.valid_metrics.update('loss', loss.item())
                 for met in self.metric_ftns:
                     metric_output = output.argmax(dim=1)
                     self.valid_metrics.update(met.__name__, met(metric_output.cpu(), target.cpu()))
 
-        # add histogram of model parameters to the tensorboard
-        # for name, p in self.model.named_parameters():
-        #     self.writer.add_histogram(name, p, bins='auto')
         return self.valid_metrics.result()
 
     def _progress(self, batch_idx):
