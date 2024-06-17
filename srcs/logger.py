@@ -18,7 +18,7 @@ class TensorboardWriter():
         self.step = 0
 
         self.tb_writer_ftns = {
-            'add_scalar', 'add_scalars', 'add_image', 'add_images', 'add_audio',
+            'add_scalar', 'add_scalars', 'add_audio',
             'add_text', 'add_histogram', 'add_pr_curve', 'add_embedding'
         }
         self.timer = datetime.now()
@@ -82,6 +82,7 @@ class BatchMetrics:
     def result(self):
         return dict(self._data.average)
 
+
 class EpochMetrics:
     def __init__(self, metric_names, phases=('train', 'valid'), monitoring='off'):
         self.logger = get_logger('epoch-metrics')
@@ -104,7 +105,7 @@ class EpochMetrics:
         if self.monitor_mode == 'min':
             return metric
         else:
-            return - metric
+            return -metric
 
     def _parse_monitoring_mode(self, monitor_mode):
         if monitor_mode == 'off':
